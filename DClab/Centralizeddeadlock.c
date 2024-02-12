@@ -25,7 +25,7 @@ struct Resource {
 // Function to check for cycles in the resource allocation graph
 bool detectCycle(Process* processes, Resource* resources, Process* cur, int start) {
     for (int i = 0; i < MAX_PROCESSES; i++) {
-        if (cur->waiting != NULL && cur->waiting->id == processes[i].holding->id) {
+        if (cur->waiting != NULL && processes[i].holding!=NULL && cur->waiting->id == processes[i].holding->id) {
             if (processes[i].id == start) {
                 return true;
             } else {
@@ -39,17 +39,21 @@ bool detectCycle(Process* processes, Resource* resources, Process* cur, int star
 }
 
 // Function to check for deadlock in a site
-bool checkDeadlockSite(Process* processes, Resource* resources, int site) {
+int checkDeadlockSite(Process* processes, Resource* resources, int site) {
+    int coordinator = -1;
     for (int i = 0; i < MAX_PROCESSES; i++) {
         if (processes[i].id != -1 && processes[i].holding != NULL && processes[i].waiting != NULL &&
             processes[i].holding->site == site && processes[i].waiting->site == site) {
             if (detectCycle(processes, resources, &processes[i], processes[i].id)) {
-                return true;
+                coordinator = processes[i].id;
+                break;
             }
         }
     }
-    return false;
+    return coordinator;
 }
+
+
 
 // Function to check for deadlock in the coordinator
 bool checkDeadlock(Process* processes, Resource* resources) {
@@ -142,19 +146,19 @@ int main() {
     }
 
     bool globalDeadlock = checkDeadlock(processes, resources);
-    bool site1Deadlock = checkDeadlockSite(processes, resources, 1);
-    bool site2Deadlock = checkDeadlockSite(processes, resources, 2);
+    int site1Deadlock = checkDeadlockSite(processes, resources, 1);
+    int site2Deadlock = checkDeadlockSite(processes, resources, 2);
 
     if (globalDeadlock) {
         printf("Deadlock detected in central coordinator\n");
     }
-    if (site1Deadlock) {
-        printf("Deadlock detected in site 1\n");
+    if (site1Deadlock != -1) {
+        printf("Deadlock detected in site 1, local coordinator: %d\n", site1Deadlock);
     }
-    if (site2Deadlock) {
-        printf("Deadlock detected in site 2\n");
+    if (site2Deadlock != -1) {
+        printf("Deadlock detected in site 2, local coordinator: %d\n", site2Deadlock);
     }
-    if (!globalDeadlock && !site1Deadlock && !site2Deadlock) {
+    if (!globalDeadlock && site1Deadlock == -1 && site2Deadlock == -1) {
         printf("No deadlock detected\n");
     }
 
